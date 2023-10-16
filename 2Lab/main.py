@@ -11,10 +11,10 @@ class MatrixSolver:
     Ax = f
     """
 
-    def _calculate_A_and_f_from_matrix_of_coefficients(self, matrix: np.matrix) -> Tuple[np.matrix]:
+    def _calculate_A_and_f_from_matrix_of_coefficients(self, matrix: np.matrix) -> Tuple[np.matrix, np.matrix]:
         """
         :param matrix: numpy matrix of coefficient [n x m]
-        :return: tuple from 2 values: numpy matrix A (nxn) and numpy matrix f [n x 1]
+        :return: tuple from 2 values: numpy matrix A [n x n] and numpy matrix f [n x 1]
         """
         n: int = matrix.shape[0]
         m: int = matrix.shape[1] - 1
@@ -50,24 +50,7 @@ class MatrixSolver:
         :param x: numpy matrix of solution [n x 1]
         :return: numpy matrix of residual [n x 1]
         """
-        matrix: np.matrix = self._matrix
-
-        n: int = matrix.shape[0]
-
-        r: np.matrix = np.matrix(
-            np.zeros([n, 1])
-        )
-
-        i: int
-        for i in range(n):
-
-            j: int
-            for j in range(n):
-                r[i, 0] += matrix[i, j] * x[j, 0]
-
-            r[i, 0] -= matrix[i, -1]
-
-        return r
+        return self._A * x - self._f
 
     def solve_by_gaussian_method_with_selection_main_element(self) -> Tuple[np.matrix, float]:
         """
@@ -121,17 +104,17 @@ class MatrixSolver:
     def _decompose_to_LU(self) -> np.matrix:
         """
         Decompose matrix A to L and U matrices.
-        L and U triangular matrices will be represented in a single nxn matrix.
+        L and U triangular matrices will be represented in a single [n x n] matrix.
         :return: numpy LU matrix [n x n]
         """
         A: np.matrix = self._A.copy()
 
+        n: int = A.shape[0]
+
         # create emtpy LU-matrix
         lu_matrix: np.matrix = np.matrix(
-            np.zeros([A.shape[0], A.shape[1]])
+            np.zeros([n, n])
         )
-
-        n: int = A.shape[0]
 
         k: int
         for k in range(n):
@@ -189,8 +172,8 @@ class MatrixSolver:
 
             i: int
             for i in range(n):
-                temp1: np.matrix = np.dot(A[i, :i], x[:i])
-                temp2: np.matrix = np.dot(A[i, i + 1:], x[i + 1:])
+                temp1: np.matrix = A[i, :i] * x[:i]
+                temp2: np.matrix = A[i, i + 1:] * x[i + 1:]
                 x[i] = (f[i] - temp1 - temp2) / A[i, i]
 
             residuals.append(
@@ -227,7 +210,7 @@ class MatrixSolver:
         while True:
             old_x = np.copy(x)
 
-            x = np.linalg.inv(D) * (f - np.dot(R, x))
+            x = np.linalg.inv(D) * (f - R * x)
 
             residuals.append(
                 np.linalg.norm(self._calculate_difference(x))
@@ -253,7 +236,7 @@ class MatrixSolver:
 
             i: int
             for i in range(n):
-                row_sum: np.matrix = np.dot(A[i, :i], x[:i]) + np.dot(A[i, i + 1:], x[i + 1:])
+                row_sum: np.matrix = A[i, :i] * x[:i] + A[i, i + 1:] * x[i + 1:]
                 x[i] = (1 - omega) * x_old[i] + omega * (f[i] - row_sum) / A[i, i]
 
             residuals.append(
